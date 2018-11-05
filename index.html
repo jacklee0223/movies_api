@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Movies API</title>
+    <script src="https://apis.google.com/js/client.js?onload=onClientLoad" type="text/javascript"></script>
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4"
+      crossorigin="anonymous">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <h1>Movie Database Search</h1>
+    <div class="form-group">
+      <label for="usr">Movie Title</label>
+      <input type="text" name="moviesSearch" class="form-control" id="title-input">
+      <input type="submit" value="Search" id="search-title">
+    </div>
+    <div class="form-group">
+      <label for="usr">IMDB ID Search</label>
+      <input type="text" name="moviesSearch" class="form-control" id="id-input">
+      <input type="submit" value="Search" id="search-id">
+    </div>
+    <div class="movies-list" id="movies-list"></div>
+
+    <div class="modal" tabindex="-1" role="dialog" id="modal">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modal-title"></h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeModal()">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="modal-image">
+              <img id="modal-image" alt="">
+            </div>
+            <div class="modal-text">
+              <div id="player"></div>
+              <p id="modal-director"></p>
+              <p id="modal-year"></p>
+              <p id="modal-genre"></p>
+              <p id="modal-rating"></p>
+              <p id="modal-plot"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <script src="./app.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js" integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ"
+      crossorigin="anonymous"></script>
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm"
+      crossorigin="anonymous"></script>
+
+    <script src="http://sabioapi2.azurewebsites.net/scripts/sabio.js"></script>
+    <script>
+      sabio.page.startUp = () => {
+        $.ajaxSetup({
+          headers: {
+            // 'sabio-auth': 'U0XK63Y2H',
+            'Content-Type' : 'application/x-www-form-urlencoded; charset=UTF-8'
+          }
+        })
+
+        $('#search-title').on('click', searchMovieByTitle);
+        $('#search-id').on('click', searchMovieById);
+      }
+
+      function searchMovieByTitle( evt ) {
+        evt.preventDefault();
+        $('#movies-list').empty();
+        const term = $('#title-input').val();
+        getMoviesByTitle(term, onSuccess, onError)
+          .then( movie => {
+            const moviesList = $('#movies-list');
+
+            const movieDiv = document.createElement('div');
+            movieDiv.classList.add("movie-div");
+            movieDiv.onclick = function (){showModal(movie)};
+
+            const moviePoster = document.createElement('img');
+            moviePoster.src = movie.Poster;
+
+            const movieTitle = document.createElement('p');
+            movieTitle.classList.add("movie-title");
+            movieTitle.innerHTML = movie.Title
+
+            movieDiv.append(moviePoster);
+            movieDiv.append(movieTitle);
+            moviesList.append(movieDiv);
+
+          } )
+      }
+
+      function searchMovieById( evt ) {
+        evt.preventDefault();
+        $('#movies-list').empty();
+        const term = $('#id-input').val();
+        getMoviesById(term, onSuccess, onError)
+          .then( movie => {
+            const moviesList = $('#movies-list');
+
+            const movieDiv = document.createElement('div');
+            movieDiv.classList.add("movie-div");
+            movieDiv.onclick = function (){showModal(movie)};
+
+            const moviePoster = document.createElement('img');
+            moviePoster.src = movie.Poster;
+
+            const movieTitle = document.createElement('p');
+            movieTitle.classList.add("movie-title");
+            movieTitle.innerHTML = movie.Title
+
+            movieDiv.append(moviePoster);
+            movieDiv.append(movieTitle);
+            moviesList.append(movieDiv);
+
+          } )
+      }
+
+      var tag = document.createElement('script');
+
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+      var player;
+      function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+          height: '390',
+          width: '640',
+          videoId: 'M7lc1UVf-VE',
+          events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+          }
+        });
+      }
+
+      function onPlayerReady(event) {
+        event.target.playVideo();
+      }
+
+      var done = false;
+      function onPlayerStateChange(event) {
+        if (event.data == YT.PlayerState.PLAYING && !done) {
+          setTimeout(stopVideo, 6000);
+          done = true;
+        }
+      }
+      function stopVideo() {
+        player.stopVideo();
+      }
+
+      function showModal( data ) {
+        const modal = $('#modal');
+        const rating = data.Ratings.filter( rating => {
+          return rating.Source === 'Rotten Tomatoes'
+        } );
+        const rating_value = rating.length > 0 ? rating[0].Value : '';
+
+        modal.modal('toggle');
+
+        $('#modal-director').html(`Directed By: ${data.Director}`);
+        $('#modal-year').html(`Year: ${data.Year}`);
+        $('#modal-genre').html(`Genre: ${data.Genre}`);
+        $('#modal-rating').html(`Rotten Tomato Rating: ${rating_value}`);
+        $('#modal-plot').html(`Plot: ${data.Plot}`);
+
+        getYoutubeVideo(data.Title)
+
+      }
+
+      function getYoutubeVideo(q) {
+        getYouTubeAPI(q, onSuccess, onError)
+          .then( data => {
+            player.loadVideoById(data.items[0].id.videoId, 5, "large")
+          })
+      }
+
+      function closeModal() {
+        const modal = $('#modal');
+        modal.modal('toggle')
+      }
+    </script>
+  </body>
+</html>
